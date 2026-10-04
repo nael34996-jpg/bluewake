@@ -18,7 +18,7 @@ Steps, each logged under OUT/logs:
   4 extract      main.dol and the 415 RELs from the disc (the disc is verified)
   5 translate    the game's PowerPC code to C (DolRecomp)
   6 generate     the composite source, compared with the verified digest
-  7 mods         widescreen 16:9 and 16:10 and Better Wind Waker's options (--no-mods skips)
+  7 mods         widescreen 16:9, 16:10 and 43:18 and Better Wind Waker's options (--no-mods skips)
   8 compile      the game module, gGZLE01_recomp.dll (the long step)
   9 app          BlueWake.exe, Aurora (Direct3D 12 through Dawn), SDL3 and the DSP
  10 package      the app folder OUT/BlueWake, ready to run
@@ -563,7 +563,7 @@ int main(void) {
 
     # --- 7 mods --------------------------------------------------------------
     def build_mods(self):
-        """Widescreen 16:9 and 16:10, Better Wind Waker's options, and each
+        """Widescreen 16:9, 16:10 and 43:18, Better Wind Waker's options, and each
         widescreen with them, as variants compiled into the same module: the
         steps of scripts/mods/build_mods.sh (docs/MODS.md)."""
         o, m = self.out, self.out / "mods"
@@ -576,7 +576,8 @@ int main(void) {
         (m / "option-sites.txt").write_bytes(listed.replace(b"\r\n", b"\n"))
         sites = ("--option-sites", m / "option-sites.txt")
 
-        for name, gecko in (("widescreen", "GZLE01.gecko"), ("widescreen1610", "GZLE01-16x10.gecko")):
+        for name, gecko in (("widescreen", "GZLE01.gecko"), ("widescreen1610", "GZLE01-16x10.gecko"),
+                            ("widescreen4318", "GZLE01-43x18.gecko")):
             print(name)
             (m / name).mkdir(exist_ok=True)
             self.run(f"mods-{name}-gecko", [sys.executable, ROOT / "scripts/mods/gecko_apply.py",
@@ -596,7 +597,8 @@ int main(void) {
         self.composite(m / "betterww/translated/dol/generated", m / "betterww/translated/rels/generated/rels",
                        o / "game/rels", o / "game/main.dol", m / "betterww/composite-src", "mods-betterww-composite")
 
-        for combo, widescreen in (("combo", "widescreen"), ("combo1610", "widescreen1610")):
+        for combo, widescreen in (("combo", "widescreen"), ("combo1610", "widescreen1610"),
+                                  ("combo4318", "widescreen4318")):
             print(f"{widescreen} + Better Wind Waker options")
             (m / combo).mkdir(exist_ok=True)
             self.translate(m / widescreen / "main.dol", m / combo / "translated", name=f"mods-{combo}-translate",
@@ -620,9 +622,12 @@ int main(void) {
             "--mod", "betterww:mods/betterww/composite-src:game/main.dol",
             "--mod", "widescreen1610:mods/widescreen1610/composite-src:mods/widescreen1610/main.dol:"
                      "mods/widescreen1610/runtime.json",
+            "--mod", "widescreen4318:mods/widescreen4318/composite-src:mods/widescreen4318/main.dol:"
+                     "mods/widescreen4318/runtime.json",
             "--combo", "widescreen+betterww:mods/combo/composite-src",
             "--combo", "widescreen1610+betterww:mods/combo1610/composite-src",
-            "--exclusive", "widescreen,widescreen1610",
+            "--combo", "widescreen4318+betterww:mods/combo4318/composite-src",
+            "--exclusive", "widescreen,widescreen1610,widescreen4318",
             "--options", options, "--rels-bin-dir", o / "game/rels"], cwd=o)
         dst = o / "composite-src"
         if (base / "generated.h").read_bytes() != (dst / "generated.h").read_bytes():

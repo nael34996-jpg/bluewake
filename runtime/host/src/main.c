@@ -798,13 +798,25 @@ static void host_mods_enable(void* lib, CPUState* cpu) {
         if (on && strcmp(mod, "betterww") == 0)
             g_options_mod = true;
     }
-    // The two widescreen mods patch the same code for different shapes; the
-    // composite has no variant for both. 16:10 wins over 16:9 if asked for both.
-    int ws169 = -1, ws1610 = -1;
+    // The widescreen mods patch the same code for different shapes; the
+    // composite has no variant for two of them. 16:10 wins over 16:9 if asked for both.
+    int ws169 = -1, ws1610 = -1, ws4318 = -1;
     for (u32 i = 0; i < available && name != NULL; ++i) {
         const char* mod = name(i);
         if (mod != NULL && strcmp(mod, "widescreen") == 0) ws169 = (int)i;
         if (mod != NULL && strcmp(mod, "widescreen1610") == 0) ws1610 = (int)i;
+        if (mod != NULL && strcmp(mod, "widescreen4318") == 0) ws4318 = (int)i;
+    }
+    // 43:18 (ultrawide) wins over both of the others.
+    if (ws4318 >= 0 && (g_mod_mask & (1u << ws4318))) {
+        if (ws169 >= 0 && (g_mod_mask & (1u << ws169))) {
+            fprintf(stderr, "[mods] widescreen and widescreen4318 are exclusive; keeping widescreen4318\n");
+            g_mod_mask &= ~(1u << ws169);
+        }
+        if (ws1610 >= 0 && (g_mod_mask & (1u << ws1610))) {
+            fprintf(stderr, "[mods] widescreen1610 and widescreen4318 are exclusive; keeping widescreen4318\n");
+            g_mod_mask &= ~(1u << ws1610);
+        }
     }
     if (ws169 >= 0 && ws1610 >= 0 && (g_mod_mask & (1u << ws169)) && (g_mod_mask & (1u << ws1610))) {
         fprintf(stderr, "[mods] widescreen and widescreen1610 are exclusive; keeping widescreen1610\n");
@@ -6019,8 +6031,8 @@ static bool host_bundle_defaults(char* module, size_t module_size) {
 #endif
 }
 
-/* BLUEWAKE_ASPECT: the picture's shape. 4:3 is the game's own; 16:10 and 16:9
-   turn on the matching widescreen mod (a wider camera, culling and HUD) and
+/* BLUEWAKE_ASPECT: the picture's shape. 4:3 is the game's own; 16:10, 43:18
+   (3440x1440 ultrawide) and 16:9 turn on the matching widescreen mod (a wider camera, culling and HUD) and
    ask the renderer for a frame buffer of that shape (DOL_AURORA_ASPECT_RATIO),
    which also sizes the window unless DOL_AURORA_WINDOW does. Explicit
    BLUEWAKE_MODS or DOL_AURORA_ASPECT_RATIO settings are kept. */
@@ -6033,11 +6045,14 @@ static void host_apply_aspect(void) {
     if (strcmp(aspect, "16:10") == 0) {
         mod = "widescreen1610";
         ratio = "1.6";
+    } else if (strcmp(aspect, "43:18") == 0) {
+        mod = "widescreen4318";
+        ratio = "2.3889";
     } else if (strcmp(aspect, "16:9") == 0) {
         mod = "widescreen";
         ratio = "1.7778";
     } else {
-        fprintf(stderr, "[aspect] unknown BLUEWAKE_ASPECT=%s (4:3, 16:10 or 16:9); keeping 4:3\n", aspect);
+        fprintf(stderr, "[aspect] unknown BLUEWAKE_ASPECT=%s (4:3, 16:10, 43:18 or 16:9); keeping 4:3\n", aspect);
         return;
     }
     setenv("DOL_AURORA_ASPECT_RATIO", ratio, 0);

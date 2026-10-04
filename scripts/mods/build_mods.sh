@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Add BlueWake's code mods (widescreen 16:9 and 16:10, Better Wind Waker's options,
+# Add BlueWake's code mods (widescreen 16:9, 16:10 and 43:18, Better Wind Waker's options,
 # and each widescreen with them) to a device build's composite source, after
 # scripts/ios/build_device.sh has built it.
 #
@@ -52,6 +52,15 @@ translate "$M/widescreen1610/main.dol" "$M/widescreen1610/translated"
 composite "$M/widescreen1610/translated/dol/generated" "$B/translated/rels/generated/rels" "$B/game/rels" \
     "$M/widescreen1610/main.dol" "$M/widescreen1610/composite-src"
 
+echo "==> widescreen 43:18"
+# 3440x1440 ultrawide; derived from the 16:9 code, see scripts/mods/widescreen_aspect.py.
+mkdir -p "$M/widescreen4318"
+python3 "$root/scripts/mods/gecko_apply.py" "$root/mods/widescreen/GZLE01-43x18.gecko" "$B/game/main.dol" \
+    "$M/widescreen4318/main.dol" "$M/widescreen4318/runtime.json"
+translate "$M/widescreen4318/main.dol" "$M/widescreen4318/translated"
+composite "$M/widescreen4318/translated/dol/generated" "$B/translated/rels/generated/rels" "$B/game/rels" \
+    "$M/widescreen4318/main.dol" "$M/widescreen4318/composite-src"
+
 echo "==> Better Wind Waker options"
 # The game's own executable and modules, translated with the option sites; the
 # variants are the chunks that hold a site (docs/MODS.md).
@@ -82,9 +91,10 @@ python3 "$root/scripts/mods/build_mod_variants.py" --composite-src "$M/composite
     --mod "widescreen:$M/widescreen/composite-src:$M/widescreen/main.dol:$M/widescreen/runtime.json" \
     --mod "betterww:$M/betterww/composite-src:$B/game/main.dol" \
     --mod "widescreen1610:$M/widescreen1610/composite-src:$M/widescreen1610/main.dol:$M/widescreen1610/runtime.json" \
+    --mod "widescreen4318:$M/widescreen4318/composite-src:$M/widescreen4318/main.dol:$M/widescreen4318/runtime.json" \
     --combo "widescreen+betterww:$M/combo/composite-src" \
     --combo "widescreen1610+betterww:$M/combo1610/composite-src" \
-    --exclusive widescreen,widescreen1610 \
+    --exclusive widescreen,widescreen1610,widescreen4318 \
     --options "$options" --rels-bin-dir "$B/game/rels"
 if ! cmp -s "$M/composite-src.base/generated.h" "$B/composite-src/generated.h"; then
     echo "build_mods: $B/composite-src was generated from other inputs; rebuild it first" >&2
